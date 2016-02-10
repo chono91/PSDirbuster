@@ -1,10 +1,25 @@
 ﻿
 
 #seed
-    #Pure brute force option
-    #instead of using ascii as you see below, we can just increment through the array using I.. this is stupid but works for now
+    #Pure brute force option DONE
     #allow different libraries to be selected
     #allow self loaded libraries
+
+
+
+function geturl($seed) {
+    $alphachars = @("a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z")
+    $charset = $alphachars
+    while ($seed -ge $charset.count) {
+        $url = $charset[($seed % $charset.count)] + $url
+        $seed = [math]::floor($seed/$charset.Count-1)
+        }
+    $url = $charset[$seed] + $url
+    return $url
+    }
+
+
+<# another attempt at brute force enumeration
 function getseed($a) {
     $input = $a
     $alphachars = @("a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z")
@@ -37,6 +52,8 @@ function getseed($a) {
  #   write-host $inputarray[0] "," $inputarray[1] "," $inputarray[2] "final"
     return $inputarray
 }
+
+#>
 
     <#old asciinumber dependent
 
@@ -98,20 +115,17 @@ write-host "D1: "$d1
 write-host "D2: "$d2
 #>
 
-$check = 1
-
-while ($check -le 4) {#check loop
-    $baseUrl = "https://www.google.com/654654" #debug testing url
-    $maxlength = 6
+function dirbuster($baseUrl) {#check loop
+    #$baseUrl = "https://www.google.com/" #debug testing url
+    $maxlength = 2
     $searchUrl = 'aa'
-    while($searchUrl.count -le $maxLength){
+    $seed = 0
+    while($searchUrl.length -le $maxLength){
         
- #       write-host $searchurl " before"
-        $searchUrl = getseed($searchUrl)
-        write-host $searchUrl
-  #      write-host $searchUrl[0] " after1"
-   #     write-host $searchUrl[1] " after2"
-    #    write-host $searchUrl[2] " after3"
+        $searchUrl = geturl($seed)
+        $seed ++
+        
+        $testUrl = $baseUrl + $searchurl
 
         $dirObject = new-object -TypeName PSObject #create on object to store the response in
         $dirObject | Add-Member -type NoteProperty -name URL -Value $testUrl  #store the url being tested
@@ -119,8 +133,14 @@ while ($check -le 4) {#check loop
         try {$response = Invoke-WebRequest -Uri $testUrl -method Get -UserAgent ([Microsoft.PowerShell.Commands.PSUserAgent]::InternetExplorer)} #try the webrequest (400 codes error)
         catch {$response = $_} # Catch any 400 codes
     
-        if ($response.StatusCode) {$dirObject | Add-Member -type NoteProperty -name response -Value $response.StatusCode} #if not a 400 code, store the code 
-        else {$dirObject | Add-Member -type NoteProperty -name response -Value $response} #If error code, store that
+        if ($response.StatusCode) {
+            $dirObject | Add-Member -type NoteProperty -name response -Value $response.StatusCode
+            $dirobject | Out-File success.txt -Append
+            } #if not a 400 code, store the code 
+        else {
+            $dirObject | Add-Member -type NoteProperty -name response -Value $response
+            $dirObject | Out-File fail.txt -Append
+            } #If 400 error code, store that
     
         $check ++ #loop increment
         $results += $dirObject
